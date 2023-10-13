@@ -52,6 +52,6 @@ This code repository leverages the open-source codebases released by [GOAT](http
 
 ```
 
-## 5. Reference
+## 6. Contact
 
 Please contact vijaypra001@e.ntu.edu.sg for any questions.
