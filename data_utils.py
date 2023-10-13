@@ -87,9 +87,9 @@ def sparse_mx_to_torch_sparse_tensor(sparse_mx):
 def get_node_ids_for_all_seq(i):
     """Returns node ids for all seqs, sampled from 1/2 hop neighborhood"""
     # i, hop1indices, hop2indices, all_nodes_set, seq_length = args
-    global all_1hop_indices, all_2hop_indices, all_nodes_set, seq_length  # node_ids_for_all_seq
+    global all_1hop_indices, all_2hop_indices, all_nodes_set, seq_length
 
-    hop1_neighbors = all_1hop_indices[i].tolist()  # g.successors(i).tolist()
+    hop1_neighbors = all_1hop_indices[i].tolist()
     hop2_neighbors = all_2hop_indices[i].tolist()
 
     all_applicable_neighbors = hop1_neighbors + hop2_neighbors
