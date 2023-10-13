@@ -42,7 +42,7 @@ This code repository leverages the open-source codebases released by [GOAT](http
 
 :page_with_curl: Paper [on arXiv](https://arxiv.org/abs/2310.xxxxx)
 
-```
+```bibtex
 @article{dwivedi2023graph,
   title={Graph Transformers for Large Graphs},
   author={Dwivedi, Vijay Prakash and Liu, Yozen and Luu, Anh Tuan and Bresson, Xavier and Shah, Neil and Zhao, Tong},
