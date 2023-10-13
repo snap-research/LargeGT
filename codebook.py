@@ -6,6 +6,24 @@ import torch.nn.functional as F
 
 
 class VectorQuantizerEMA(nn.Module):
+    """
+    Vector Quantizer with Exponential Moving Average (EMA) for the codebook.
+    Adapted from https://github.com/devnkong/GOAT
+
+    Args:
+        num_embeddings (int): The number of embeddings in the codebook.
+        embedding_dim (int): The dimensionality of each embedding.
+        decay (float, optional): The decay rate for the EMA. Defaults to 0.99.
+
+    Attributes:
+        _embedding_dim (int): The dimensionality of each embedding.
+        _num_embeddings (int): The number of embeddings in the codebook.
+        _decay (float): The decay rate for the EMA.
+        _embedding (nn.Embedding): The embedding matrix.
+        _ema_cluster_size (torch.Tensor): The exponential moving average of the cluster sizes.
+        _ema_w (torch.Tensor): The exponential moving average of the embedding updates.
+    """
+
     def __init__(self, num_embeddings, embedding_dim, decay=0.99):
         super(VectorQuantizerEMA, self).__init__()
 
@@ -28,9 +46,15 @@ class VectorQuantizerEMA(nn.Module):
         self.bn = torch.nn.BatchNorm1d(self._embedding_dim * 2, affine=False)
 
     def get_k(self):
+        """
+        Returns the key tensor of the embedding matrix.
+        """
         return self._embedding_output
 
     def get_v(self):
+        """
+        Returns the value tensor of the embedding matrix.
+        """
         return self._embedding_output[:, : self._embedding_dim]
 
     def update(self, x):
@@ -62,9 +86,6 @@ class VectorQuantizerEMA(nn.Module):
             self._ema_cluster_size.data = (
                 (self._ema_cluster_size + 1e-5) / (n + self._num_embeddings * 1e-5) * n
             )
-
-            # if torch.count_nonzero(self._ema_cluster_size) != self._ema_cluster_size.shape[0] :
-            #     raise ValueError('Bad Init!')
 
             dw = torch.matmul(encodings.t(), inputs_normalized)
             self._ema_w.data = self._ema_w * self._decay + (1 - self._decay) * dw

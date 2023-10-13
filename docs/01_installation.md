@@ -47,9 +47,3 @@ pip install dgl -f https://data.dgl.ai/wheels/cu117/repo.html
 
 conda clean --all
 ```
-
-
-
-
-
-<br><br><br>

@@ -174,7 +174,7 @@ def main(tstamp=0):
     parser.add_argument("--test_freq", type=int, default=1)
     parser.add_argument("--num_workers", type=int, default=cpu_count() - 1)
 
-    # NN
+    # network
     parser.add_argument(
         "--conv_type", type=str, default="full", choices=["local", "global", "full"]
     )
@@ -184,7 +184,7 @@ def main(tstamp=0):
     parser.add_argument("--num_heads", type=int, default=1)
     parser.add_argument("--attn_dropout", type=float, default=0)
     parser.add_argument("--ff_dropout", type=float, default=0.5)
-    parser.add_argument("--skip", type=int, default=0)
+    parser.add_argument("--skip", action="store_true")
     parser.add_argument("--num_centroids", type=int, default=4096)
     parser.add_argument("--no_bn", action="store_true")
     parser.add_argument("--norm_type", type=str, default="batch_norm")
@@ -212,9 +212,6 @@ def main(tstamp=0):
         id=wandb.util.generate_id(),
         settings=wandb.Settings(start_method="fork"),
     )
-
-    # convert int to boolean:
-    args.skip = args.skip > 0
 
     device = f"cuda:{args.device}" if torch.cuda.is_available() else "cpu"
     device = torch.device(device)
@@ -509,11 +506,11 @@ if __name__ == "__main__":
     timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
 
     for run_number in range(total_runs):
-        val_score, test_score, timee = main(timestamp)
+        val_score, test_score, time_run = main(timestamp)
         all_valid_acc.append(val_score)
         all_test_acc.append(test_score)
-        all_time.append(timee)
+        all_time.append(time_run)
 
     print("Mean valid acc: ", npmean(all_valid_acc), "s.d.: ", npstd(all_valid_acc))
     print("Mean test acc: ", npmean(all_test_acc), "s.d.: ", npstd(all_test_acc))
-    print("Avg time taken for 4 runs: ", npmean(timee))
+    print("Avg time taken for 4 runs: ", npmean(time_run))

@@ -7,7 +7,7 @@ import time
 
 from data_utils import (
     get_ogbn_products_with_splits,
-    get_snap_patents,
+    get_snap_patents_with_splits,
     get_ogbn_papers100M_with_splits,
     get_data_pt_file,
 )
@@ -67,7 +67,6 @@ def even_quantile_labels(vals, nclasses=5, verbose=True):
 
 
 def get_dataset_with_splits(dataset):
-    # print(dataset)
     if dataset == "ogbn-products":
         (
             adj,
@@ -78,7 +77,14 @@ def get_dataset_with_splits(dataset):
             idx_test,
         ) = get_ogbn_products_with_splits()
     elif dataset == "snap-patents":
-        adj, features, labels, idx_train, idx_val, idx_test = get_snap_patents()
+        (
+            adj,
+            features,
+            labels,
+            idx_train,
+            idx_val,
+            idx_test,
+        ) = get_snap_patents_with_splits()
     elif dataset == "ogbn-papers100M":
         (
             adj,
@@ -93,6 +99,19 @@ def get_dataset_with_splits(dataset):
 
 
 class LargeGTTokens(torch.utils.data.Dataset):
+    """
+    A class for preparing the input data used in the local module
+    of LargeGT, or load it from a file. The class also contains
+    the collate_new function for the dataloader which returns the
+    input tokens for a mini-batch sample.
+
+    Args:
+        name (str): The name of the dataset.
+        sample_node_len (int, optional): The total number of 1,2
+            hop neighbors to sample for each node.
+
+    """
+
     def __init__(self, name, sample_node_len=50, seed=0):
         super(LargeGTTokens, self).__init__()
 
@@ -117,6 +136,8 @@ class LargeGTTokens(torch.utils.data.Dataset):
             self.X = torch.tensor(data_list[1], dtype=torch.float32)
             self.hop2token_feats = torch.tensor(data_list[2], dtype=torch.float32)
         except KeyError:
+            # for ogbn-papers100M with sample_node_len=100, the total data is too large
+            # hence we save the data in multiple files
             self.nodes_in_seq = torch.tensor(data_list["nodes_in_seq"])
             self.X = torch.tensor(data_list["node_feat"])
             self.hop2token_feats = torch.load(
@@ -138,6 +159,10 @@ class LargeGTTokens(torch.utils.data.Dataset):
         return self.collate_new(samples, original_X)
 
     def collate_new_slow(self, batch):
+        """
+        The function implements the Algorithm InputTokens in the paper.
+        Slow version -- not used in the main code.
+        """
         mini_batch_size = len(batch)
 
         seq = torch.empty(mini_batch_size, self.token_len * 3, self.input_dim)
@@ -153,6 +178,10 @@ class LargeGTTokens(torch.utils.data.Dataset):
         return seq, torch.tensor(batch)
 
     def collate_new(self, batch, original_X):
+        """
+        The function implements the Algorithm InputTokens in the paper.
+        Efficient version -- used in the main code.
+        """
         mini_batch_size = len(batch)
         seq = torch.empty(mini_batch_size, self.token_len * 3, self.input_dim)
 

@@ -6,119 +6,16 @@ import numpy as np
 import scipy.sparse as sp
 from multiprocessing import Pool, cpu_count
 
+from ogb.nodeproppred import DglNodePropPredDataset
 
-# Util functions from https://github.com/THUDM/GRAND-plus
-def sample_per_class(
-    random_state, labels, num_examples_per_class, forbidden_indices=None
-):
-    num_samples, num_classes = labels.shape
-    sample_indices_per_class = {index: [] for index in range(num_classes)}
-
-    # get indices sorted by class
-    for class_index in range(num_classes):
-        for sample_index in range(num_samples):
-            if labels[sample_index, class_index] > 0.0:
-                if forbidden_indices is None or sample_index not in forbidden_indices:
-                    sample_indices_per_class[class_index].append(sample_index)
-
-    # get specified number of indices for each class
-    return np.concatenate(
-        [
-            random_state.choice(
-                sample_indices_per_class[class_index],
-                num_examples_per_class,
-                replace=False,
-            )
-            for class_index in range(len(sample_indices_per_class))
-        ]
-    )
-
-
-def get_train_val_test_split(
-    random_state,
-    labels,
-    train_examples_per_class=None,
-    val_examples_per_class=None,
-    test_examples_per_class=None,
-    train_size=None,
-    val_size=None,
-    test_size=None,
-):
-    num_samples, num_classes = labels.shape
-    remaining_indices = list(range(num_samples))
-
-    if train_examples_per_class is not None:
-        train_indices = sample_per_class(random_state, labels, train_examples_per_class)
-    else:
-        # select train examples with no respect to class distribution
-        train_indices = random_state.choice(
-            remaining_indices, train_size, replace=False
-        )
-
-    if val_examples_per_class is not None:
-        val_indices = sample_per_class(
-            random_state,
-            labels,
-            val_examples_per_class,
-            forbidden_indices=train_indices,
-        )
-    else:
-        remaining_indices = np.setdiff1d(remaining_indices, train_indices)
-        val_indices = random_state.choice(remaining_indices, val_size, replace=False)
-
-    forbidden_indices = np.concatenate((train_indices, val_indices))
-    if test_examples_per_class is not None:
-        test_indices = sample_per_class(
-            random_state,
-            labels,
-            test_examples_per_class,
-            forbidden_indices=forbidden_indices,
-        )
-    elif test_size is not None:
-        remaining_indices = np.setdiff1d(remaining_indices, forbidden_indices)
-        test_indices = random_state.choice(remaining_indices, test_size, replace=False)
-    else:
-        test_indices = np.setdiff1d(remaining_indices, forbidden_indices)
-    print(len(set(train_indices)), len(train_indices))
-    # assert that there are no duplicates in sets
-    assert len(set(train_indices)) == len(train_indices)
-    assert len(set(val_indices)) == len(val_indices)
-    assert len(set(test_indices)) == len(test_indices)
-    # assert sets are mutually exclusive
-    assert len(set(train_indices) - set(val_indices)) == len(set(train_indices))
-    assert len(set(train_indices) - set(test_indices)) == len(set(train_indices))
-    assert len(set(val_indices) - set(test_indices)) == len(set(val_indices))
-    if test_size is None and test_examples_per_class is None:
-        # all indices must be part of the split
-        assert (
-            len(np.concatenate((train_indices, val_indices, test_indices)))
-            == num_samples
-        )
-
-    if train_examples_per_class is not None:
-        train_labels = labels[train_indices, :]
-        train_sum = np.sum(train_labels, axis=0)
-        # assert all classes have equal cardinality
-        assert np.unique(train_sum).size == 1
-
-    if val_examples_per_class is not None:
-        val_labels = labels[val_indices, :]
-        val_sum = np.sum(val_labels, axis=0)
-        # assert all classes have equal cardinality
-        assert np.unique(val_sum).size == 1
-
-    if test_examples_per_class is not None:
-        test_labels = labels[test_indices, :]
-        test_sum = np.sum(test_labels, axis=0)
-        # assert all classes have equal cardinality
-        assert np.unique(test_sum).size == 1
-
-    return train_indices, val_indices, test_indices
+# global vars used in data sampling steps in create_node_ids()
+all_1hop_indices = None
+all_2hop_indices = None
+all_nodes_set = None
+seq_length = None
 
 
 def get_ogbn_products_with_splits():
-    from ogb.nodeproppred import DglNodePropPredDataset
-
     dataset = DglNodePropPredDataset(name="ogbn-products")
 
     g = dataset[0][0]
@@ -135,7 +32,7 @@ def get_ogbn_products_with_splits():
     return adj, features, labels, idx_train, idx_val, idx_test
 
 
-def get_snap_patents():
+def get_snap_patents_with_splits():
     import scipy
 
     fulldata = scipy.io.loadmat(f"data/snap_patents.mat")
@@ -160,8 +57,6 @@ def get_snap_patents():
 
 
 def get_ogbn_papers100M_with_splits():
-    from ogb.nodeproppred import DglNodePropPredDataset
-
     dataset = DglNodePropPredDataset(name="ogbn-papers100M")
 
     g = dataset[0][0]
@@ -169,19 +64,12 @@ def get_ogbn_papers100M_with_splits():
     adj = g.adj_external(scipy_fmt="csr")
     features = g.ndata["feat"]
 
-    # labels = torch.nn.functional.one_hot(dataset[0][1].type(torch.int).view(-1), dataset[0][1].type(torch.int).max()+1)
     labels = torch.rand(1)  # dummy value as it is not required for GOAT2 code
     idx_train = split_idx["train"]
     idx_val = split_idx["valid"]
     idx_test = split_idx["test"]
 
     return adj, features, labels, idx_train, idx_val, idx_test
-
-
-all_1hop_indices = None
-all_2hop_indices = None
-all_nodes_set = None
-seq_length = None
 
 
 def sparse_mx_to_torch_sparse_tensor(sparse_mx):
@@ -221,7 +109,7 @@ def get_node_ids_for_all_seq(i):
 
 
 def create_node_ids(X, adj_matrix, for_nagphormer=False, sample_node_len=0):
-    global all_1hop_indices, all_2hop_indices, all_nodes_set, seq_length  # node_ids_for_all_seq
+    global all_1hop_indices, all_2hop_indices, all_nodes_set, seq_length
 
     N = X.size(0)
     all_nodes_set = list(set(range(N)))
@@ -229,11 +117,11 @@ def create_node_ids(X, adj_matrix, for_nagphormer=False, sample_node_len=0):
 
     print("multiset length for sampling: ", seq_length)
 
-    tt = time.time()
+    t0 = time.time()
     print("multiplying csr matrix to itself...")
-    # print(adj_matrix[:10], adj_matrix[0])
+
     adj_matrix_2hop = adj_matrix @ adj_matrix
-    print("Done", time.time() - tt)
+    print("Done", time.time() - t0)
     print("getting all 1 hop indices...")
     all_1hop_indices = np.split(adj_matrix.indices, adj_matrix.indptr)[1:-1]
     print("Done\ngetting all 2 hop indices...")
@@ -251,7 +139,7 @@ def create_node_ids(X, adj_matrix, for_nagphormer=False, sample_node_len=0):
         "Retrieved node ids for all seqs, now preparing hop2token feats for hop=2... "
     )
 
-    tt = time.time()
+    t0 = time.time()
 
     if for_nagphormer:
         hop2token_range = 10
@@ -283,7 +171,7 @@ def create_node_ids(X, adj_matrix, for_nagphormer=False, sample_node_len=0):
             hop2token_feats[index, 0, i, :] = tmp[index]
     hop2token_feats = hop2token_feats.squeeze()
 
-    print("DONE!", time.time() - tt)
+    print("DONE!", time.time() - t0)
     del adj_matrix, adj_matrix_2hop, tmp
 
     print("Saving now ...")
@@ -291,6 +179,7 @@ def create_node_ids(X, adj_matrix, for_nagphormer=False, sample_node_len=0):
 
 
 def get_data_pt_file(name, data_args, sample_node_len):
+    # adj_matrix, X, labels, idx_train, idx_val, idx_test = data_args
     adj_matrix = data_args[0]
     X = torch.tensor(data_args[1], dtype=torch.float32)
     labels = torch.tensor(data_args[2])

@@ -14,7 +14,7 @@ def save_embedding(model, dim, dataset_name):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='OGBN-Products (Node2Vec)')
+    parser = argparse.ArgumentParser(description='SNAP-Patents (Node2Vec)')
     parser.add_argument('--device', type=int, default=0)
     parser.add_argument('--embedding_dim', type=int, default=64)
     parser.add_argument('--walk_length', type=int, default=40)
@@ -29,7 +29,6 @@ def main():
     device = f'cuda:{args.device}' if torch.cuda.is_available() else 'cpu'
     device = torch.device(device)
 
-    #########################################
     dataset_name = 'snap-patents'
 
     fulldata = scipy.io.loadmat(f'../snap_patents.mat')
