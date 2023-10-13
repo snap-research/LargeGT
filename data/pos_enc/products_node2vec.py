@@ -27,7 +27,6 @@ def main():
     device = f'cuda:{args.device}' if torch.cuda.is_available() else 'cpu'
     device = torch.device(device)
 
-    #########################################
     dataset_name = 'ogbn-products'
     dataset = PygNodePropPredDataset(name='ogbn-products', root='../')
     data = dataset[0]
