@@ -1,0 +1,43 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.pyo
+*.so
+
+# Virtual environment
+venv/
+.env
+
+# Jupyter Notebook files
+.ipynb_checkpoints/
+
+# PyTorch files
+*.pt
+*.pth
+
+# Logs
+logs/
+
+# Data
+*.csv
+*.tsv
+*.pkl
+*.mat
+data/ogbn_papers100M/
+data/ogbn_products/
+pos_enc/
+
+# Config files
+config.yaml
+config.json
+
+# IDE-specific files (VS Code, PyCharm, etc.)
+.vscode/
+.idea/
+
+# Miscellaneous
+.DS_Store
+*.swp
+*.swo
+wandb/
+run_expt.sh
