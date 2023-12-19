@@ -1,6 +1,6 @@
 # LargeGT: Graph Transformers for Large Graphs
 
-Source code for the paper **[Graph Transformers for Large Graphs]((https://arxiv.org/abs/2312.11109)** 
+Source code for the paper **[Graph Transformers for Large Graphs](https://arxiv.org/abs/2312.11109)** 
 >by [Vijay Prakash Dwivedi](http://vijaydwivedi.com.np), [Yozen Liu](https://research.snap.com/team/team-member.html#yozen-liu), [Anh Tuan Luu](https://tuanluu.github.io), [Xavier Bresson](https://scholar.google.com/citations?user=9pSK04MAAAAJ&hl=en), [Neil Shah](https://nshah.net) and [Tong Zhao](https://tzhao.io).
 
 The paper proposes LargeGT which is a scalable Graph Transformer framework designed to efficiently handle large-scale graphs, featuring a combination of fast neighborhood sampling and local-global attention mechanisms.  
