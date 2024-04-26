@@ -96,13 +96,13 @@ class LargeGTLayer(MessagePassing):
 
     def forward(self, seq, x, pos_enc=None, batch_idx=None):
         if self.conv_type == "local":
-            out = self.local_forward(seq, pos_enc)
+            out = self.local_forward(seq)
 
         elif self.conv_type == "global":
             out = self.global_forward(x[: len(batch_idx)], pos_enc, batch_idx)
 
         elif self.conv_type == "full":
-            out_local = self.local_forward(seq, pos_enc)
+            out_local = self.local_forward(seq)
             out_global = self.global_forward(x[: len(batch_idx)], pos_enc, batch_idx)
             out = torch.cat([out_local, out_global], dim=1)
 
@@ -147,8 +147,8 @@ class LargeGTLayer(MessagePassing):
 
         return out
 
-    def local_forward(self, seq, pos_enc):
-        return self.local_module(seq, pos_enc)
+    def local_forward(self, seq):
+        return self.local_module(seq)
 
     def __repr__(self) -> str:
         return (
